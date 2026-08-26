@@ -1,0 +1,6 @@
+{
+  "name": "Injibara House Rentals",
+  "description": "Injibara House Rentals Head Office - Professional house rental platform with low commission and service fee only.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=house_rental_app
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=house_rental
+      - JWT_SECRET=${JWT_SECRET}
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL}
+      - TEXTBEE_API_KEY=${TEXTBEE_API_KEY}
+      - TEXTBEE_DEVICE_ID=${TEXTBEE_DEVICE_ID}
+      - TEXTBEE_WEBHOOK_SECRET=${TEXTBEE_WEBHOOK_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SUPPORT_PHONE=${SUPPORT_PHONE}
+      - SUPPORT_EMAIL=${SUPPORT_EMAIL}
+      - CLIENT_URL=${CLIENT_URL}
+      - TRUST_PROXY=1
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=house_rental
+      - MYSQL_USER=house_rental_app
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backups:/backups
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 5
+      interval: 10s
+    networks:
+      - app-network
+
+volumes:
+  mysql-data:
+
+networks:
+  app-network:
+    driver: bridge
