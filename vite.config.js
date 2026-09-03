@@ -12,6 +12,27 @@ export default defineConfig(() => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './client'),
+        'motion-dom': path.resolve(__dirname, './node_modules/motion-dom'),
+        'motion-utils': path.resolve(__dirname, './node_modules/motion-utils'),
+      },
+    },
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-dom/client',
+        'react-router-dom',
+        'framer-motion',
+        'motion',
+        'motion-dom',
+        'motion-utils',
+        'recharts',
+        'lucide-react',
+        'leaflet',
+        '@reduxjs/toolkit',
+      ],
+      esbuildOptions: {
+        target: 'esnext',
       },
     },
     define: {

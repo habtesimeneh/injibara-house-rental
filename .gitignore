@@ -1,7 +1,13 @@
 node_modules/
 .env
+.env.local
+.env.production
+.env.development.local
+.env.test.local
 .env.*
 !.env.example
+*.pem
+*.key
 
 dist/
 build/
@@ -24,4 +30,8 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Diagnostic / debugging scripts (may contain hardcoded secrets)
+__diag*.mjs
+*.diag.*
 

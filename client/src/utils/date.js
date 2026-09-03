@@ -1,5 +1,9 @@
 import { EthDateTime } from 'ethiopian-calendar-date-converter';
 
+
+/**
+ * Ethiopian Months
+ */
 export const ETHIOPIAN_MONTHS = [
   { id: 1, english: 'Meskerem', amharic: 'መስከረም' },
   { id: 2, english: 'Tikimt', amharic: 'ጥቅምት' },
@@ -16,197 +20,378 @@ export const ETHIOPIAN_MONTHS = [
   { id: 13, english: 'Pagume', amharic: 'ጳጉሜ' },
 ];
 
+
 /**
- * Check if Ethiopian Year is a leap year (Pagume has 6 days)
+ * Check if Ethiopian Year is a leap year.
+ *
+ * Pagume has 6 days during leap year.
  */
 export const isEthiopianLeapYear = (ethYear) => {
-  return (ethYear + 1) % 4 === 0;
+  return (Number(ethYear) + 1) % 4 === 0;
 };
 
-/**
- * Get EAT (Africa/Addis_Ababa, UTC+3) Date details from ISO/Date input
- */
-export const getEATDateDetails = (isoString) => {
-  if (!isoString) return null;
 
-  let dateObj;
-  if (typeof isoString === 'string') {
-    let str = isoString;
-    if (str.includes('T') && !str.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(str)) {
-      str += 'Z';
-    }
-    dateObj = new Date(str);
-  } else if (isoString instanceof Date) {
-    dateObj = isoString;
-  } else {
-    dateObj = new Date(isoString);
+/**
+ * Get Ethiopia / Addis Ababa (EAT UTC+3)
+ * date and time details.
+ *
+ * IMPORTANT:
+ * This function does NOT manually add timezone offsets.
+ * Intl.DateTimeFormat handles Africa/Addis_Ababa timezone.
+ */
+/**
+ * Get current local date and time.
+ *
+ * Uses the user's computer/browser clock directly.
+ */
+export const getLocalDateDetails = (dateInput = new Date()) => {
+  const dateObj =
+    dateInput instanceof Date
+      ? new Date(dateInput.getTime())
+      : new Date(dateInput);
+
+  if (Number.isNaN(dateObj.getTime())) {
+    return null;
   }
 
-  if (isNaN(dateObj.getTime())) return null;
-
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Africa/Addis_Ababa',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(dateObj);
-  const values = {};
-  parts.forEach((part) => {
-    if (part.type !== 'literal') {
-      values[part.type] = part.value;
-    }
-  });
-
-  const year = Number(values.year);
-  const month = Number(values.month) - 1;
-  const day = Number(values.day);
-  const hours = Number(values.hour);
-  const minutes = Number(values.minute);
-  const seconds = Number(values.second);
-
   return {
-    year,
-    month,
-    day,
-    hours,
-    minutes,
-    seconds,
-    rawDate: new Date(Date.UTC(year, month, day, 12, 0, 0)),
+    year: dateObj.getFullYear(),
+    month: dateObj.getMonth(),
+    day: dateObj.getDate(),
+    hours: dateObj.getHours(),
+    minutes: dateObj.getMinutes(),
+    seconds: dateObj.getSeconds(),
+
+    // Used for Ethiopian calendar date conversion
+    rawDate: new Date(
+      dateObj.getFullYear(),
+      dateObj.getMonth(),
+      dateObj.getDate(),
+      12,
+      0,
+      0
+    ),
   };
 };
 
+
 /**
- * Convert Gregorian Date to Ethiopian Date Object (using EAT timezone)
+ * Convert Gregorian Date
+ * to Ethiopian Date Object.
+ *
+ * Uses Addis Ababa timezone.
  */
 export const gregorianToEthiopian = (gregorianDate) => {
   const eat = getEATDateDetails(gregorianDate);
-  if (!eat) return null;
+
+  if (!eat) {
+    return null;
+  }
 
   try {
-    const eth = EthDateTime.fromEuropeanDate(eat.rawDate);
-    const monthInfo = ETHIOPIAN_MONTHS.find(m => m.id === eth.month) || ETHIOPIAN_MONTHS[0];
-    
+    const eth = EthDateTime.fromEuropeanDate(
+      eat.rawDate
+    );
+
+    const monthInfo =
+      ETHIOPIAN_MONTHS.find(
+        (month) => month.id === eth.month
+      ) || ETHIOPIAN_MONTHS[0];
+
     return {
       year: eth.year,
       month: eth.month,
       day: eth.date,
+
       monthEnglish: monthInfo.english,
       monthAmharic: monthInfo.amharic,
-      formattedEnglish: `${monthInfo.english} ${eth.date}, ${eth.year}`,
-      formattedAmharic: `${monthInfo.amharic} ${eth.date}፣ ${eth.year} ዓ.ም.`
+
+      formattedEnglish:
+        `${monthInfo.english} ${eth.date}, ${eth.year}`,
+
+      formattedAmharic:
+        `${monthInfo.amharic} ${eth.date} ቀን ${eth.year} ዓ.ም.`,
     };
-  } catch (err) {
-    console.error('Error converting Gregorian to Ethiopian:', err);
+
+  } catch (error) {
+    console.error(
+      'Error converting Gregorian to Ethiopian:',
+      error
+    );
+
     return null;
   }
 };
 
+
 /**
- * Convert Ethiopian Date (Year, Month, Day) to Gregorian Date Object
+ * Convert Ethiopian Date
+ * to Gregorian Date Object.
  */
-export const ethiopianToGregorian = (ethYear, ethMonth, ethDay) => {
+export const ethiopianToGregorian = (
+  ethYear,
+  ethMonth,
+  ethDay
+) => {
   try {
     const year = Number(ethYear);
     const month = Number(ethMonth);
     const day = Number(ethDay);
 
-    if (!year || !month || !day) return null;
+    if (!year || !month || !day) {
+      return null;
+    }
 
-    const eth = new EthDateTime(year, month, day, 0, 0, 0);
+    const eth = new EthDateTime(
+      year,
+      month,
+      day,
+      0,
+      0,
+      0
+    );
+
     return eth.toEuropeanDate();
-  } catch (err) {
-    console.error('Error converting Ethiopian to Gregorian:', err);
+
+  } catch (error) {
+    console.error(
+      'Error converting Ethiopian to Gregorian:',
+      error
+    );
+
     return null;
   }
 };
 
+
 /**
- * Format ISO Date string to readable Ethiopian Date string
+ * Get Amharic time period.
+ *
+ * 00:00 - 00:59 = ከሌሊቱ
+ * 01:00 - 05:59 = ከጠዋቱ
+ * 06:00 - 12:59 = ከሰዓት
+ * 13:00 - 23:59 = ከሌሊቱ
  */
-export const formatEthiopianDate = (isoString, useAmharic = false) => {
-  if (!isoString) return '';
-  const eth = gregorianToEthiopian(isoString);
-  if (!eth) return new Date(isoString).toLocaleDateString();
-  return useAmharic ? eth.formattedAmharic : eth.formattedEnglish;
+export const getAmharicTimePeriod = (hour24) => {
+  const hour = Number(hour24);
+
+  if (
+    Number.isNaN(hour) ||
+    hour < 0 ||
+    hour > 23
+  ) {
+    return '';
+  }
+
+  if (hour >= 1 && hour < 6) {
+    return 'ከጠዋቱ';
+  }
+
+  if (hour >= 6 && hour < 13) {
+    return 'ከሰዓት';
+  }
+
+  return 'ከሌሊቱ';
 };
 
+
 /**
- * Format ISO Date string to readable Ethiopian Date and Time string
+ * Convert 24-hour time
+ * to normal 12-hour display.
+ *
+ * IMPORTANT:
+ *
+ * NO +6 OR -6 Ethiopian clock conversion here.
+ *
+ * Examples:
+ *
+ * 04:52 -> 4:52
+ * 10:47 -> 10:47
+ * 12:30 -> 12:30
+ * 16:52 -> 4:52
+ * 20:45 -> 8:45
  */
-export const formatEthiopianDateTime = (isoString, showSeconds = true) => {
-  if (!isoString) return '';
-  try {
-    const eat = getEATDateDetails(isoString);
-    if (!eat) return new Date(isoString).toLocaleString('am-ET');
+export const getEthiopianTimeDetails = (
+  hour24,
+  minute = 0,
+  second = 0
+) => {
+  const hour = Number(hour24);
 
-    const eth = EthDateTime.fromEuropeanDate(eat.rawDate);
-    const monthInfo = ETHIOPIAN_MONTHS.find(m => m.id === eth.month) || ETHIOPIAN_MONTHS[0];
+  if (
+    Number.isNaN(hour) ||
+    hour < 0 ||
+    hour > 23
+  ) {
+    return null;
+  }
 
-    const ethHour24 = eat.hours;
-    let periodAmharic = '';
+  const displayHour =
+    hour % 12 || 12;
 
-    if (ethHour24 >= 0 && ethHour24 < 6) {
-      periodAmharic = 'ከጥዋቱ';
-    } else if (ethHour24 >= 6 && ethHour24 < 12) {
-      periodAmharic = 'ከቀኑ';
-    } else if (ethHour24 >= 12 && ethHour24 < 18) {
-      periodAmharic = 'ከምሽቱ';
-    } else {
-      periodAmharic = 'ከሌሊቱ';
-    }
+  const periodAmharic =
+    getAmharicTimePeriod(hour);
 
-    const ethHour12 = ethHour24 % 12 || 12;
-    const minutes = eat.minutes.toString().padStart(2, '0');
-    const seconds = eat.seconds.toString().padStart(2, '0');
-    const timeStr = showSeconds
-      ? `${periodAmharic} ${ethHour12}:${minutes}:${seconds}`
-      : `${periodAmharic} ${ethHour12}:${minutes}`;
+  return {
+    hour24: hour,
+    displayHour,
+    hour12: displayHour,
 
-    return `${monthInfo.amharic} ${eth.date} ቀን ${eth.year} ዓ.ም. - ${timeStr}`;
-  } catch (err) {
+    minutes: Number(minute),
+    seconds: Number(second),
+
+    periodAmharic,
+  };
+};
+
+
+/**
+ * Format ISO Date string
+ * to readable Ethiopian Date.
+ */
+export const formatEthiopianDate = (
+  isoString,
+  useAmharic = false
+) => {
+  if (!isoString) {
+    return '';
+  }
+
+  const eth =
+    gregorianToEthiopian(isoString);
+
+  if (!eth) {
     try {
-      return new Date(isoString).toLocaleString('am-ET');
-    } catch (e) {
-      return new Date(isoString).toString();
+      return new Date(
+        isoString
+      ).toLocaleDateString();
+    } catch (error) {
+      return '';
     }
+  }
+
+  return useAmharic
+    ? eth.formattedAmharic
+    : eth.formattedEnglish;
+};
+
+
+/**
+ * Format Date and Time
+ * to Ethiopian Calendar Date
+ * with Addis Ababa Time.
+ *
+ * Example:
+ *
+ * ነሐሴ 21 ቀን 2018 ዓ.ም.
+ * ከሰዓት 4:52 ሰዓት
+ */
+export const formatEthiopianDateTime = (
+  dateInput,
+  showSeconds = false
+) => {
+  if (!dateInput) return '';
+
+  try {
+    // IMPORTANT:
+    // Use browser/computer local time
+    const local = getLocalDateDetails(dateInput);
+
+    if (!local) return '';
+
+    const eth = EthDateTime.fromEuropeanDate(
+      local.rawDate
+    );
+
+    const monthInfo =
+      ETHIOPIAN_MONTHS.find(
+        (month) => month.id === eth.month
+      ) || ETHIOPIAN_MONTHS[0];
+
+    const hour24 = local.hours;
+
+    const periodAmharic = getAmharicTimePeriod(hour24);
+
+    // Normal 12-hour display
+    const displayHour =
+      hour24 % 12 || 12;
+
+    const minutes = String(
+      local.minutes
+    ).padStart(2, '0');
+
+    const seconds = String(
+      local.seconds
+    ).padStart(2, '0');
+
+    const timeString = showSeconds
+      ? `${periodAmharic} ${displayHour}:${minutes}:${seconds} ሰዓት`
+      : `${periodAmharic} ${displayHour}:${minutes} ሰዓት`;
+
+    return (
+      `${monthInfo.amharic} ` +
+      `${eth.date} ቀን ` +
+      `${eth.year} ዓ.ም. ` +
+      `${timeString}`
+    );
+
+  } catch (error) {
+    console.error(
+      'Error formatting Ethiopian date/time:',
+      error
+    );
+
+    return '';
   }
 };
 
+
 /**
- * Format ISO Date string to Ethiopian 12-hour Time string only
+ * Format Ethiopian Time only.
+ *
+ * Examples:
+ *
+ * ከጠዋቱ 10:47 ሰዓት
+ *
+ * ከሰዓት 4:52 ሰዓት
  */
-export const formatEthiopianTimeOnly = (isoString, showSeconds = true) => {
-  if (!isoString) return '';
+export const formatEthiopianTimeOnly = (
+  dateInput,
+  showSeconds = false
+) => {
+  if (!dateInput) return '';
+
   try {
-    const eat = getEATDateDetails(isoString);
-    if (!eat) return '';
+    const local =
+      getLocalDateDetails(dateInput);
 
-    const ethHour24 = eat.hours;
-    let periodAmharic = '';
+    if (!local) return '';
 
-    if (ethHour24 >= 0 && ethHour24 < 6) {
-      periodAmharic = 'ከጥዋቱ';
-    } else if (ethHour24 >= 6 && ethHour24 < 12) {
-      periodAmharic = 'ከቀኑ';
-    } else if (ethHour24 >= 12 && ethHour24 < 18) {
-      periodAmharic = 'ከምሽቱ';
-    } else {
-      periodAmharic = 'ከሌሊቱ';
+    const hour24 = local.hours;
+
+    const periodAmharic = getAmharicTimePeriod(hour24);
+
+    const displayHour =
+      hour24 % 12 || 12;
+
+    const minutes =
+      String(local.minutes).padStart(2, '0');
+
+    const seconds =
+      String(local.seconds).padStart(2, '0');
+
+    if (showSeconds) {
+      return `${periodAmharic} ${displayHour}:${minutes}:${seconds} ሰዓት`;
     }
 
-    const ethHour12 = ethHour24 % 12 || 12;
-    const minutes = eat.minutes.toString().padStart(2, '0');
-    const seconds = eat.seconds.toString().padStart(2, '0');
-    return showSeconds
-      ? `${periodAmharic} ${ethHour12}:${minutes}:${seconds}`
-      : `${periodAmharic} ${ethHour12}:${minutes}`;
-  } catch (err) {
+    return `${periodAmharic} ${displayHour}:${minutes} ሰዓት`;
+
+  } catch (error) {
+    console.error(
+      'Error formatting Ethiopian time:',
+      error
+    );
+
     return '';
   }
 };
