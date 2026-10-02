@@ -196,47 +196,75 @@ async function startServer() {
   });
 
   // Ensure uploads directory exists
-  const uploadsDir = path.join(process.cwd(), 'uploads');
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+// AletCloud/container environments may not allow writing to /app,
+// so use /tmp for runtime-writable temporary storage.
+const uploadsDir = path.join('/tmp', 'injibara-house-rental-uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Protected uploads middleware - allow public read for images,
+// require auth for sensitive files
+const protectedUploads = (req, res, next) => {
+  const ext = path.extname(req.path).toLowerCase();
+  const sensitiveExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
+
+  if (sensitiveExtensions.includes(ext)) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({
+        error: 'Authentication required for this file'
+      });
+    }
+
+    try {
+      const jwtSecret = process.env.JWT_SECRET;
+
+      if (!jwtSecret) {
+        return res.status(500).json({
+          error: 'Server configuration error'
+        });
+      }
+
+      jwt.verify(token, jwtSecret, {
+        algorithms: ['HS256']
+      });
+    } catch (error) {
+      return res.status(401).json({
+        error: 'Invalid or expired token'
+      });
+    }
   }
 
-  // Protected uploads middleware - allow public read for images, require auth for sensitive files
-  const protectedUploads = (req, res, next) => {
-    const ext = path.extname(req.path).toLowerCase();
-    const sensitiveExtensions = ['.pdf', '.doc', '.docx', '.xls', '.xlsx'];
-    
-    if (sensitiveExtensions.includes(ext)) {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.split(' ')[1];
-      if (!token) {
-        return res.status(401).json({ error: 'Authentication required for this file' });
-      }
-      try {
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret) {
-          return res.status(500).json({ error: 'Server configuration error' });
-        }
-        jwt.verify(token, jwtSecret, { algorithms: ['HS256'] });
-      } catch (error) {
-        return res.status(401).json({ error: 'Invalid or expired token' });
-      }
-    }
-    next();
-  };
+  next();
+};
 
-  app.use('/uploads', protectedUploads, express.static(uploadsDir));
+app.use(
+  '/uploads',
+  protectedUploads,
+  express.static(uploadsDir)
+);
 
-  // API Routes
-  app.get('/api/health', async (req, res) => {
-    try {
-      const pool = getPool();
-      await pool.query('SELECT 1');
-      res.json({ status: 'ok', database: 'connected' });
-    } catch (error) {
-      res.status(503).json({ status: 'error', database: 'unavailable' });
-    }
-  });
+// API Routes
+app.get('/api/health', async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.query('SELECT 1');
+
+    res.json({
+      status: 'ok',
+      database: 'connected'
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      database: 'unavailable'
+    });
+  }
+});
 
   // Dynamic SEO Sitemap for Google Search Indexing
   app.get('/sitemap.xml', async (req, res) => {
