@@ -4,11 +4,11 @@ import { randomBytes } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
-import fs from 'fs';
 import helmet from 'helmet';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import { UPLOAD_DIR } from './config/uploadDir.js';
 import { apiLimiter } from './middleware/rateLimiter.js';
 
 dotenv.config();
@@ -339,44 +339,26 @@ async function startServer() {
   });
 
   // ============================================================
-  // ALETCloud/container-safe uploads directory
+  // Uploads directory
   // ============================================================
   //
   // IMPORTANT:
-  // Do NOT use:
-  //   process.cwd()/uploads
-  //   /app/uploads
+  // Do NOT derive the uploads directory from process.cwd() or /app.
+  // Container environments usually run with a read-only working
+  // directory, so creating a directory there throws EACCES and kills
+  // the process at startup.
   //
-  // Container environments may not allow writing to /app.
-  // /tmp is writable during runtime.
+  // backend/config/uploadDir.js resolves the first writable candidate
+  // (UPLOAD_DIR env var -> <cwd>/uploads -> <tmpdir>/injibara-...),
+  // creates it, and exports the result. Every multer destination and
+  // the static route below share that same value.
   //
   // NOTE:
-  // /tmp storage is temporary and may be cleared after restart.
-  // Persistent storage should be added later for production uploads.
+  // The tmpdir fallback is temporary and may be cleared after restart.
+  // Set UPLOAD_DIR to a mounted volume for production persistence.
   // ============================================================
 
-  const uploadsDir =
-    '/tmp/injibara-house-rental-uploads';
-
-  try {
-    fs.mkdirSync(
-      uploadsDir,
-      {
-        recursive: true
-      }
-    );
-
-    console.log(
-      `[UPLOADS] Using runtime-writable directory: ${uploadsDir}`
-    );
-  } catch (error) {
-    console.error(
-      '[UPLOADS] Failed to initialize uploads directory:',
-      error
-    );
-
-    process.exit(1);
-  }
+  const uploadsDir = UPLOAD_DIR;
 
   // ============================================================
   // Protected uploads middleware

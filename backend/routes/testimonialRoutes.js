@@ -1,5 +1,6 @@
 import express from 'express';
 import { getPool } from '../../database/db.js';
+import { UPLOAD_DIR } from '../config/uploadDir.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 import multer from 'multer';
 import path from 'path';
@@ -16,7 +17,7 @@ const MIME_TO_EXT_MAP = {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    cb(null, UPLOAD_DIR);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

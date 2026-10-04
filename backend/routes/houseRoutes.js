@@ -4,6 +4,7 @@ import path from "path";
 import crypto from "crypto";
 
 import { protect, authorize } from "../middleware/authMiddleware.js";
+import { UPLOAD_DIR } from "../config/uploadDir.js";
 import { validateAmharaRegion } from "../middleware/regionMiddleware.js";
 import { securityAuditLog } from "../middleware/securityMiddleware.js";
 import { getPool } from "../../database/db.js";
@@ -57,7 +58,7 @@ const MIME_TO_EXT_MAP = {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, UPLOAD_DIR);
   },
 
   filename: (req, file, cb) => {

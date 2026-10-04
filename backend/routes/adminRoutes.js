@@ -1,8 +1,7 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 
+import { UPLOAD_DIR } from '../config/uploadDir.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 import { securityAuditLog } from '../middleware/securityMiddleware.js';
 
@@ -99,18 +98,12 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
 | Upload Directory
 |--------------------------------------------------------------------------
 |
-| Resolve the upload directory relative to the project working directory.
-| The directory is created automatically if it does not exist.
+| Resolved once in config/uploadDir.js and already guaranteed writable.
+| Never call mkdirSync on a path derived from process.cwd() here: in a
+| container the working directory is read-only, and a top-level
+| mkdirSync would abort the process before the server can start.
 |
 */
-
-const uploadDirectory = path.resolve(process.cwd(), 'uploads');
-
-if (!fs.existsSync(uploadDirectory)) {
-  fs.mkdirSync(uploadDirectory, {
-    recursive: true
-  });
-}
 
 /*
 |--------------------------------------------------------------------------
@@ -168,7 +161,7 @@ router.use((req, res, next) => {
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDirectory);
+    cb(null, UPLOAD_DIR);
   },
 
   filename: (req, file, cb) => {

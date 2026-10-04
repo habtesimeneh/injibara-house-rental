@@ -54,6 +54,9 @@ BACKUP_DIR=./backups
 BACKUP_RETENTION_DAYS=30
 TRUST_PROXY=1
 ALLOW_SQLITE_FALLBACK=false
+
+# Uploads (point this at a mounted persistent volume in containers)
+# UPLOAD_DIR=/data/uploads
 ```
 
 **Never commit `.env` to version control.**
@@ -290,6 +293,7 @@ systemctl stop injibara-house
 | JWT secret too short | Generate 32+ character secret |
 | CORS errors | Verify `CLIENT_URL` matches frontend origin |
 | Backup fails | Verify `mysqldump` is installed and DB credentials are correct |
+| `EACCES: permission denied, mkdir '/app/uploads'` | The app directory is read-only in the container. Uploads fall back to the system temp dir automatically; set `UPLOAD_DIR` to a mounted volume to persist files |
 
 ---
 

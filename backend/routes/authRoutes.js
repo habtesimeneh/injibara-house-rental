@@ -11,6 +11,7 @@ import {
   smsSendIpLimiter
 } from "../middleware/rateLimiter.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { UPLOAD_DIR } from "../config/uploadDir.js";
 
 import {
   register,
@@ -41,7 +42,7 @@ const router = express.Router();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, UPLOAD_DIR);
   },
 
   filename: (req, file, cb) => {
